@@ -1,0 +1,15 @@
+#!/bin/bash
+
+rm -f *.o
+#gcc -DHAVE_CONFIG_H pacsd.cc pacsd/*.cc pacsd/core/*.cc \
+gcc -DHAVE_CONFIG_H \
+	pacsd.cc \
+	pacsd/*.cc \
+	pacsd/core/*.cc \
+	pacsd/dicom/*.cc \
+	pacsd/internals/*.cc \
+	\
+	-lboost_thread -lboost_system -lboost_filesystem \
+	-ldcmnet -ldcmdata -lofstd -loflog -ldcmsr \
+	-O2 -o pacs-simple \
+	-Werror -g
