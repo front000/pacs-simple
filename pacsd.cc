@@ -1,8 +1,8 @@
 #include <boost/thread.hpp>
 #include <boost/bind.hpp>
-#include "pacsd/server.h"
-#include "pacsd/core/config.h"
-#include "pacsd/core/exception.h"
+#include "lib/server.h"
+#include "lib/core/config.h"
+#include "lib/core/exception.h"
 
 /*
 int thread_id () {
