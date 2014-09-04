@@ -23,14 +23,14 @@ public:
 
 	MYSQL *connect (); 
 	void disconnect ();
-	int set (std::string query);
-	void get (std::vector<std::vector<std::string> > &data, std::string query);
+	int set (OFString query);
+	void get (std::vector<std::vector<OFString> > &data, OFString query);
 
 	/* Making list of available dicom tags */
 	void initDicomCFindKeys ();
 
 	/* Constructs sql query */
-	OFString CFindSQLQuery (DcmDataset *requestIdentifiers, OFString QueryLevel);
+	OFString CFindSQLQuery (DcmDataset *requestIdentifiers, OFString QueryLevel, std::vector<OFString> &keys);
 };
 
 #endif

@@ -34,7 +34,7 @@ void Database::disconnect () {
 	if (connection) mysql_close (connection);
 }
 
-int Database::set (std::string query) {
+int Database::set (OFString query) {
 	int state = mysql_query (connection, query.c_str ());
 	if (state)
 		std::cerr << "Could not execute query '" << query << "': " << mysql_error (connection) << std::endl;
@@ -42,21 +42,21 @@ int Database::set (std::string query) {
 	return state;
 }
 
-void Database::get (std::vector<std::vector<std::string> > &m, std::string query) {
+void Database::get (std::vector<std::vector<OFString> > &data, OFString query) {
 	if (set (query)) {
-		m.clear ();
+		data.clear ();
 	} else {
 		result = mysql_store_result (connection);
 		std::size_t num_fields = mysql_num_fields (result);
 
-		std::vector<std::string> temp;
+		std::vector<OFString> temp;
 		temp.reserve (num_fields);
 		while ((row = mysql_fetch_row (result)) != NULL) {
 			std::size_t i;
 			for (i = 0; i < num_fields; i++) {
 				temp.push_back (row[i]);
 			}
-			m.push_back (temp);
+			data.push_back (temp);
 			temp.clear ();
 		}
 
@@ -65,7 +65,7 @@ void Database::get (std::vector<std::vector<std::string> > &m, std::string query
 	}
 }
 
-OFString Database::CFindSQLQuery (DcmDataset *requestIdentifiers, OFString QueryLevel) {
+OFString Database::CFindSQLQuery (DcmDataset *requestIdentifiers, OFString QueryLevel, std::vector<OFString> &keys) {
 	OFString sql_select = "SELECT patient.SpecificCharacterSet";
 	OFString sql_from = "FROM patient, study, series, object";
 	OFString sql_where = "WHERE patient.id = study.patient_id AND study.id = series.study_id AND series.id = object.series_id";
@@ -116,12 +116,28 @@ OFString Database::CFindSQLQuery (DcmDataset *requestIdentifiers, OFString Query
 		if (boost::regex_search (tn, what, boost::regex (pattern)))
 			tbl = "object";
 
-		if (object->isEmpty ()) {
-			sql_select += ", " + tbl + "." + tagName;
-		} else {
+		sql_select += ", " + tbl + "." + tagName;
+		// OFString (DcmTagKey)
+		OFString SpecificCharacterSet ("SpecificCharacterSet");
+		keys.push_back (SpecificCharacterSet);
+		if (!(std::find (keys.begin (), keys.end (), tagName) != keys.end ())) {
+			std::cout << "ADDED KEY: '" << tagName << "'" << std::endl;
+			keys.push_back (tagName);
+		}
+
+		if (!object->isEmpty ()) {
+			// TODO: sql_select increment if QueryRootLevel == tbl
+			sql_select += ", " + tbl + "." + tagName; // select this too
+
 			requestIdentifiers->findAndGetOFString (tag.getXTag (), tagValue);
-			OFString qv = tbl + "." + tagName + " = \"" + tagValue + "\""; // <-- Fucking API! I hate u screening!
+			OFString qv;
+			if (tagName == "PatientName") {
+				qv = tbl + "." + tagName + " LIKE \"" + tagValue + "%\""; // <-- Fucking API! I hate u screening!
+			} else {
+				qv = tbl + "." + tagName + " = \"" + tagValue + "\""; // <-- Fucking API! I hate u screening!
+			}
 			q.push_back (qv);
+			qv.clear ();
 		}
 	}
 
@@ -133,4 +149,3 @@ OFString Database::CFindSQLQuery (DcmDataset *requestIdentifiers, OFString Query
 
 	return sql_select + " " + sql_from + " " + sql_where;
 }
-

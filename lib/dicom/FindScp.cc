@@ -2,6 +2,7 @@
 #include "../db/db_mysql.h"
 #include "dcmtk/dcmdata/dcobject.h"
 #include "dcmtk/dcmdata/dcdeftag.h"
+#include "dcmtk/dcmdata/dcelem.h"
 #include <algorithm>
 
 static OFLogger echoscuLogger = OFLog::getLogger ("PACS-SIMPLE");
@@ -18,12 +19,15 @@ void FindScpCallback (
 	DcmDataset **responseIdentifiers,
 	DcmDataset **statusDetail
 ) {
+	DCMNET_INFO ("ResponseCount is " << responseCount);
 	/*
 	bzero((char*)&response, sizeof (T_DIMSE_C_FindRSP));
 	*statusDetail = NULL;
 	*/
 
 	Database dbh;
+	std::vector<std::vector<OFString> > data;
+	std::vector<OFString> keys;
 
 	if (cancelled) {
 		strcpy(response->AffectedSOPClassUID, request->AffectedSOPClassUID);
@@ -34,10 +38,8 @@ void FindScpCallback (
 	}
 
 	if (responseCount == 1) {
-		//dbh.connect (); // initializing
-
 		OFString QueryRootLevel = CFindQueryLevel (requestIdentifiers);
-		// If QueryRetrieveLevel was not received -> rejecting request
+		/* Rejecting C-Find request if QueryRetrieveLevel was not defined */
 		if (QueryRootLevel.empty ()) {
 			strcpy(response->AffectedSOPClassUID, request->AffectedSOPClassUID);
 			response->MessageIDBeingRespondedTo = request->MessageID;
@@ -46,32 +48,58 @@ void FindScpCallback (
 			return;
 		}
 
-		OFString query = dbh.CFindSQLQuery (requestIdentifiers, QueryRootLevel);
-		DCMNET_INFO ("query: " << query);
+		/* Loading info from db */
+		dbh.connect ();
+		OFString query = dbh.CFindSQLQuery (requestIdentifiers, QueryRootLevel, keys);
+		//DCMNET_INFO ("query: " << query);
+
+		/* Loading results */
+		dbh.get (data, query);
+		//DCMNET_INFO ("Found " << data.size () << " items");
+
 		// proceed next request
 		response->DimseStatus = STATUS_Pending;
-
-		/*
-		DcmStack stack;
-		DcmObject *object = NULL;
-		OFBool next_ = OFTrue;
-
-		stack.clear ();
-		while (requestIdentifiers->nextObject (stack, next_).good ()) {
-			object = stack.top ();
-			DcmTag tag = object->getTag ();
-			OFString t = tag.getTagName ();
-			DCMNET_INFO ("C-FIND handled key: " << object->getTag() << ", tag name is " << tag.getTagName());
-		}
-		*/
+		//return;
 	}
 
+	std::size_t i;
+	for (i = 0; i < data.size (); i++) {
+		std::vector<OFString>::const_iterator it_data, it_key;
+		*responseIdentifiers = new DcmDataset;
+		for (it_data = data[i].begin (), it_key = keys.begin (); it_key < keys.end (); ++it_data, ++it_key) {
+			DcmTag tag;
+			DcmElement *dce;
+
+			OFCondition cond = DcmTag::findTagFromName ((*it_key).c_str (), tag);
+			if (cond.bad ()) // Unknown or bad tag name
+				continue;
+
+			dce = newDicomElement (tag);
+			dce->putString ((*it_data).c_str ());
+			(*responseIdentifiers)->insert (dce, OFTrue);
+		}
+
+		data[i].clear ();
+		(*responseIdentifiers)->print (std::cout);
+		response->DimseStatus = STATUS_Pending;
+		return;
+	}
+	keys.clear ();
+	data.clear ();
+
+	OFBool end = OFFalse;
+	//
+	// return result
+	//
+
 	// finalizing -> Success
-	strcpy(response->AffectedSOPClassUID, request->AffectedSOPClassUID);
-	response->MessageIDBeingRespondedTo = request->MessageID;
-	response->DimseStatus = STATUS_Success;
-	response->DataSetType = DIMSE_DATASET_NULL;
-	return;
+	//if (end) { 
+		strcpy(response->AffectedSOPClassUID, request->AffectedSOPClassUID);
+		response->MessageIDBeingRespondedTo = request->MessageID;
+		response->DimseStatus = STATUS_Success;
+		response->DataSetType = DIMSE_DATASET_NULL;
+		return;
+	//}
 
 	requestIdentifiers->print (std::cout);
 	DCMNET_INFO ("ResponseCount is " << responseCount);
