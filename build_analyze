@@ -1,0 +1,41 @@
+#!/bin/bash
+
+function _exit_err()
+{
+	rm -f *.o
+	exit 1
+}
+
+g++ -DHAVE_CONFIG_H -O2 -g \
+	pacsd.cc \
+	lib/*.cc \
+	lib/core/*.cc \
+	lib/dicom/*.cc \
+	lib/internals/*.cc \
+	lib/db/*.cc \
+	\
+	-lboost_thread -lboost_system -lboost_filesystem -lboost_regex \
+	-ldcmnet -ldcmdata -lofstd -loflog -ldcmsr \
+	-lmysqlclient \
+	-Wall -Wextra -pedantic -Weffc++ -Woverloaded-virtual -Wctor-dtor-privacy -Wnon-virtual-dtor -Wold-style-cast -Wconversion -Wsign-conversion -Winit-self -Wunreachable-code \
+	-o ./bin/pacs-simple
+
+
+exit 1
+
+rm -f *.o
+g++ -DHAVE_CONFIG_H -c \
+	pacsd.cc \
+	lib/*.cc \
+	lib/core/*.cc \
+	lib/dicom/*.cc \
+	lib/internals/*.cc \
+	lib/db/*.cc
+[ $? -eq 0 ] || _exit_err
+
+g++ -DHAVE_CONFIG_H -O2 -Werror -g -o ./bin/pacs-simple \
+	-lboost_thread -lboost_system -lboost_filesystem -lboost_regex \
+	-ldcmnet -ldcmdata -lofstd -loflog -ldcmsr \
+	-lmysqlclient
+
+rm -f *.o
