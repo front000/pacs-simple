@@ -120,10 +120,8 @@ OFString Database::CFindSQLQuery (DcmDataset *requestIdentifiers, OFString Query
 		// OFString (DcmTagKey)
 		OFString SpecificCharacterSet ("SpecificCharacterSet");
 		keys.push_back (SpecificCharacterSet);
-		if (!(std::find (keys.begin (), keys.end (), tagName) != keys.end ())) {
-			std::cout << "ADDED KEY: '" << tagName << "'" << std::endl;
+		if (!(std::find (keys.begin (), keys.end (), tagName) != keys.end ()))
 			keys.push_back (tagName);
-		}
 
 		if (!object->isEmpty ()) {
 			// TODO: sql_select increment if QueryRootLevel == tbl

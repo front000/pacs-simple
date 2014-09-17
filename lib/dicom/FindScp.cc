@@ -20,16 +20,12 @@ void FindScpCallback (
 	DcmDataset **statusDetail
 ) {
 	DCMNET_INFO ("ResponseCount is " << responseCount);
-	/*
-	bzero((char*)&response, sizeof (T_DIMSE_C_FindRSP));
-	*statusDetail = NULL;
-	*/
-
-	Database dbh;
-	std::vector<std::vector<OFString> > data;
-	std::vector<OFString> keys;
+	//bzero((char*)&response, sizeof (T_DIMSE_C_FindRSP));
+	//*statusDetail = NULL;
 
 	if (cancelled) {
+		memset (&CFindData, 0, sizeof (CFindData));
+
 		strcpy(response->AffectedSOPClassUID, request->AffectedSOPClassUID);
 		response->MessageIDBeingRespondedTo = request->MessageID;
 		response->DimseStatus = STATUS_FIND_Cancel_MatchingTerminatedDueToCancelRequest;
@@ -38,6 +34,8 @@ void FindScpCallback (
 	}
 
 	if (responseCount == 1) {
+		memset (&CFindData, 0, sizeof (CFindData));
+
 		OFString QueryRootLevel = CFindQueryLevel (requestIdentifiers);
 		/* Rejecting C-Find request if QueryRetrieveLevel was not defined */
 		if (QueryRootLevel.empty ()) {
@@ -48,30 +46,37 @@ void FindScpCallback (
 			return;
 		}
 
-		/* Loading info from db */
+		Database dbh;
 		dbh.connect ();
-		OFString query = dbh.CFindSQLQuery (requestIdentifiers, QueryRootLevel, keys);
-		//DCMNET_INFO ("query: " << query);
+
+		/* Generating query */
+		OFString query = dbh.CFindSQLQuery (requestIdentifiers, QueryRootLevel, CFindData.keys);
+		//DCMNET_INFO ("SQL Query: " << query);
 
 		/* Loading results */
-		dbh.get (data, query);
-		//DCMNET_INFO ("Found " << data.size () << " items");
+		dbh.get (CFindData.data, query);
+		// DCMNET_INFO ("Found " << CFindData.data.size () << " items");
+
+		/* Get last item id */
+		CFindData.last_ = CFindData.data.size ();
+		CFindData.itNum = 0;
 
 		// proceed next request
 		response->DimseStatus = STATUS_Pending;
 		//return;
 	}
 
-	std::size_t i;
-	for (i = 0; i < data.size (); i++) {
-		std::vector<OFString>::const_iterator it_data, it_key;
+	while (CFindData.itNum < CFindData.last_) {
 		*responseIdentifiers = new DcmDataset;
-		for (it_data = data[i].begin (), it_key = keys.begin (); it_key < keys.end (); ++it_data, ++it_key) {
+
+		std::vector<OFString>::const_iterator it_data = CFindData.data[CFindData.itNum].begin ();
+		std::vector<OFString>::const_iterator it_key = CFindData.keys.begin ();
+		for (it_data, it_key; it_key < CFindData.keys.end (); ++it_key, ++it_data) {
 			DcmTag tag;
 			DcmElement *dce;
 
 			OFCondition cond = DcmTag::findTagFromName ((*it_key).c_str (), tag);
-			if (cond.bad ()) // Unknown or bad tag name
+			if (cond.bad ())
 				continue;
 
 			dce = newDicomElement (tag);
@@ -79,30 +84,21 @@ void FindScpCallback (
 			(*responseIdentifiers)->insert (dce, OFTrue);
 		}
 
-		data[i].clear ();
 		(*responseIdentifiers)->print (std::cout);
 		response->DimseStatus = STATUS_Pending;
+		CFindData.itNum++;
+
 		return;
 	}
-	keys.clear ();
-	data.clear ();
 
-	OFBool end = OFFalse;
-	//
-	// return result
-	//
+	/* Finalize  */
+	memset (&CFindData, 0, sizeof (CFindData));
 
-	// finalizing -> Success
-	//if (end) { 
-		strcpy(response->AffectedSOPClassUID, request->AffectedSOPClassUID);
-		response->MessageIDBeingRespondedTo = request->MessageID;
-		response->DimseStatus = STATUS_Success;
-		response->DataSetType = DIMSE_DATASET_NULL;
-		return;
-	//}
-
-	requestIdentifiers->print (std::cout);
-	DCMNET_INFO ("ResponseCount is " << responseCount);
+	strcpy(response->AffectedSOPClassUID, request->AffectedSOPClassUID);
+	response->MessageIDBeingRespondedTo = request->MessageID;
+	response->DataSetType = DIMSE_DATASET_NULL;
+	response->DimseStatus = STATUS_Success;
+	return;
 }
 
 OFCondition FindScp (T_ASC_Association *assoc, T_DIMSE_Message *msg, T_ASC_PresentationContextID presID) {

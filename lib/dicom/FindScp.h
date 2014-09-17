@@ -5,6 +5,13 @@
 #include "dcmtk/dcmnet/diutil.h"
 #include <vector>
 
+static struct CFindAnswers {
+	std::size_t last_;
+	std::size_t itNum; // Current iteration (response) number 0 -> data.size ()
+	std::vector<std::vector<OFString> > data;
+	std::vector<OFString> keys;
+} CFindData;
+
 OFCondition FindScp (
 	T_ASC_Association *assoc,
 	T_DIMSE_Message *msg,

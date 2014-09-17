@@ -6,7 +6,7 @@ function _exit_err()
 	exit 1
 }
 
-g++ -DHAVE_CONFIG_H \
+g++ -DHAVE_CONFIG_H -pipe \
 	pacsd.cc \
 	lib/*.cc \
 	lib/core/*.cc \
@@ -17,7 +17,7 @@ g++ -DHAVE_CONFIG_H \
 	-lboost_thread -lboost_system -lboost_filesystem -lboost_regex \
 	-ldcmnet -ldcmdata -lofstd -loflog -ldcmsr \
 	-lmysqlclient \
-	-O2 -Werror -g \
+	-O2 -Werror -g -pipe \
 	-o ./bin/pacs-simple
 
 
