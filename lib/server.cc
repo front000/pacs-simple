@@ -1,9 +1,9 @@
 #include "server.h"
 #include "core/exception.h"
-#include "dicom/request.h"
+//#include "dicom/request.h"
+#include "dicom/PacsdRequest.h"
 #include <vector>
 
-// <--
 Server::~Server () {
 	cond = ASC_dropNetwork (&net);
 
@@ -29,7 +29,6 @@ T_ASC_Network *Server::Init () {
 	return net;
 }
 
-// <--
 OFCondition Association::Cleanup (T_ASC_Association *assoc) {
 	if (!assoc)
 		throw PacsdException ("Association: could not cleanup, cause not defined");
@@ -52,14 +51,11 @@ OFCondition Association::Cleanup (T_ASC_Association *assoc) {
 //T_ASC_Association *Association::Accept (T_ASC_Network *net) {
 void *Association::Connect (T_ASC_Network *net) {
 	// init assoc
-	//std::cout << "I: Waiting for association, timeout " << sc.timeout << std::endl;
 	cond = ASC_receiveAssociation (net, &assoc, ASC_DEFAULTMAXPDU, NULL, NULL, OFFalse, DUL_NOBLOCK, sc.timeout);
 	
 	// timeout, nothing to connect thread
 	if (cond == DUL_NOASSOCIATIONREQUEST) {
-		//std::cout << "I: Connection was not received" << std::endl;
 		Cleanup (assoc);
-		//std::cout << "I: Closing thread\n";
 		return NULL; // thread finished
 	}
 
@@ -92,7 +88,6 @@ void *Association::Connect (T_ASC_Network *net) {
 
 	// C-MOVE
 	presentationContexts.push_back (UID_MOVEStudyRootQueryRetrieveInformationModel);
-	presentationContexts.push_back (UID_VerificationSOPClass);
 
 	/*
 		Connection checks

@@ -6,6 +6,7 @@
 typedef struct ServerConfig {
 	std::string	version;
 	std::string	aetitle;
+	std::string savepath;
 	int			port;
 	int			timeout;
 	int			maxreq;

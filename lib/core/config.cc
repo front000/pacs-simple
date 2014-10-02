@@ -13,6 +13,7 @@ ServerConfig Config::initDefault () {
 	sc.port		= 1111;
 	sc.timeout	= 30;
 	sc.aecheck	= true;
+	sc.savepath	= "/var/pacsd/data";
 
 	return sc;
 }
@@ -30,6 +31,7 @@ ServerConfig Config::Load (const char *filename) {
 		sc.port		= pt.get<int>("main.port", 1111);
 		sc.timeout	= pt.get<int>("main.timeout", 30);
 		sc.aecheck	= pt.get<bool>("pacs.aecheck", true);
+		sc.savepath	= pt.get<std::string>("main.savepath", "/var/pacsd/data");
 
 	}
 	catch (std::exception &e) {

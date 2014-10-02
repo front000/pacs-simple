@@ -11,7 +11,7 @@ g++ -DHAVE_CONFIG_H -pipe \
 	lib/*.cc \
 	lib/core/*.cc \
 	lib/dicom/*.cc \
-	lib/internals/*.cc \
+	lib/dicom/internals/*.cc \
 	lib/db/*.cc \
 	\
 	-lboost_thread -lboost_system -lboost_filesystem -lboost_regex \

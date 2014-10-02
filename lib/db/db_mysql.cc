@@ -145,5 +145,6 @@ OFString Database::CFindSQLQuery (DcmDataset *requestIdentifiers, OFString Query
 			sql_where += " AND " + *it;
 	}
 
+	DCMNET_INFO (sql_select + " " + sql_from + " " + sql_where);
 	return sql_select + " " + sql_from + " " + sql_where;
 }
